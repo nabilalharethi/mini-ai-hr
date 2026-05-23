@@ -155,7 +155,7 @@ async function executeTool(name: string, args: Record<string, any>): Promise<str
         const results = await searchEmployees(args.search_name)
         if (results.length === 0) return `ERROR: No employee found with name "${args.search_name}".`
         const emp = results[0]
-        const summaryModel = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+        const summaryModel = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' })
         const result = await summaryModel.generateContent(
           `Write a professional 2-3 sentence HR bio for: ${emp.full_name}, ${emp.job_title} in ${emp.department}. Employment: ${emp.employment_type}. Location: ${emp.work_location ?? 'unknown'}. Manager: ${emp.manager_name ?? 'unknown'}. Joined: ${emp.joining_date ?? 'unknown'}. Status: ${emp.status}. Keep it concise and professional.`
         )
@@ -222,7 +222,7 @@ export async function POST(req: NextRequest) {
 
     // ── 4. Call Gemini ──────────────────────────────────────
     const model = genAI.getGenerativeModel({
-      model: 'gemini-2.0-flash',
+      model: 'gemini-1.5-flash-latest',
       tools,
       systemInstruction: `You are an HR Admin AI assistant. Help manage employee records.
 When asked to perform actions (create, update, deactivate, list, summarize), ALWAYS use the provided tools.
