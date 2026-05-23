@@ -9,7 +9,12 @@ import {
   searchEmployees,
 } from '@/lib/actions/employees'
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
+// ── Check env vars exist ──────────────────────────────────────
+if (!process.env.GEMINI_API_KEY) {
+  console.error('GEMINI_API_KEY is not set')
+}
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? '')
 
 const tools = [
   {
@@ -20,16 +25,16 @@ const tools = [
         parameters: {
           type: 'object',
           properties: {
-            full_name:       { type: 'string', description: 'Full name' },
-            email:           { type: 'string', description: 'Work email' },
-            phone:           { type: 'string', description: 'Phone number' },
-            job_title:       { type: 'string', description: 'Job title' },
-            department:      { type: 'string', description: 'Department name' },
-            employment_type: { type: 'string', description: 'full-time, part-time, contract, or intern' },
-            joining_date:    { type: 'string', description: 'Start date YYYY-MM-DD' },
-            status:          { type: 'string', description: 'active or inactive' },
-            manager_name:    { type: 'string', description: 'Manager full name' },
-            work_location:   { type: 'string', description: 'City or office' },
+            full_name:       { type: 'string' },
+            email:           { type: 'string' },
+            phone:           { type: 'string' },
+            job_title:       { type: 'string' },
+            department:      { type: 'string' },
+            employment_type: { type: 'string' },
+            joining_date:    { type: 'string' },
+            status:          { type: 'string' },
+            manager_name:    { type: 'string' },
+            work_location:   { type: 'string' },
           },
           required: ['full_name', 'email', 'job_title', 'department'],
         },
@@ -40,7 +45,7 @@ const tools = [
         parameters: {
           type: 'object',
           properties: {
-            search_name:     { type: 'string', description: 'Name to search for' },
+            search_name:     { type: 'string' },
             full_name:       { type: 'string' },
             email:           { type: 'string' },
             phone:           { type: 'string' },
@@ -61,7 +66,7 @@ const tools = [
         parameters: {
           type: 'object',
           properties: {
-            search_name: { type: 'string', description: 'Name to search for' },
+            search_name: { type: 'string' },
           },
           required: ['search_name'],
         },
@@ -72,7 +77,7 @@ const tools = [
         parameters: {
           type: 'object',
           properties: {
-            status: { type: 'string', description: 'active, inactive, or all' },
+            status: { type: 'string' },
           },
         },
       },
@@ -82,7 +87,7 @@ const tools = [
         parameters: {
           type: 'object',
           properties: {
-            search_name: { type: 'string', description: 'Name of employee' },
+            search_name: { type: 'string' },
           },
           required: ['search_name'],
         },
@@ -117,8 +122,8 @@ async function executeTool(name: string, args: Record<string, any>): Promise<str
         const results = await searchEmployees(search_name)
         if (results.length === 0) return `ERROR: No employee found with name "${search_name}".`
         const fields = [
-          'full_name', 'email', 'phone', 'job_title', 'department',
-          'employment_type', 'joining_date', 'status', 'manager_name', 'work_location',
+          'full_name','email','phone','job_title','department',
+          'employment_type','joining_date','status','manager_name','work_location',
         ]
         const clean: Record<string, any> = {}
         fields.forEach(f => { if (updates[f] !== undefined) clean[f] = updates[f] })
@@ -163,51 +168,102 @@ async function executeTool(name: string, args: Record<string, any>): Promise<str
         return `ERROR: Unknown tool "${name}"`
     }
   } catch (err: any) {
-    return `ERROR: ${err.message}`
+    return `ERROR in ${name}: ${err.message}`
   }
 }
 
 export async function POST(req: NextRequest) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  try {
 
-  const { messages } = await req.json()
+    // ── 1. Check Gemini key exists ──────────────────────────
+    if (!process.env.GEMINI_API_KEY) {
+      return NextResponse.json(
+        { reply: '❌ GEMINI_API_KEY is not configured. Please add it to your environment variables.' },
+        { status: 200 }
+      )
+    }
 
-  const model = genAI.getGenerativeModel({
-    model: 'gemini-1.5-flash',
-    tools,
-    systemInstruction: `You are an HR Admin AI assistant. Help manage employee records.
+    // ── 2. Auth check ───────────────────────────────────────
+    let user = null
+    try {
+      const supabase = await createClient()
+      const { data } = await supabase.auth.getUser()
+      user = data.user
+    } catch (authErr: any) {
+      console.error('Auth error:', authErr)
+      return NextResponse.json(
+        { reply: '❌ Authentication error. Please refresh and try again.' },
+        { status: 200 }
+      )
+    }
+
+    if (!user) {
+      return NextResponse.json(
+        { reply: '❌ Not authenticated. Please log in again.' },
+        { status: 200 }
+      )
+    }
+
+    // ── 3. Parse request body ───────────────────────────────
+    let messages: any[] = []
+    try {
+      const body = await req.json()
+      messages = body.messages ?? []
+    } catch {
+      return NextResponse.json(
+        { reply: '❌ Invalid request format.' },
+        { status: 200 }
+      )
+    }
+
+    if (messages.length === 0) {
+      return NextResponse.json({ reply: 'No message received.' }, { status: 200 })
+    }
+
+    // ── 4. Call Gemini ──────────────────────────────────────
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-1.5-flash',
+      tools,
+      systemInstruction: `You are an HR Admin AI assistant. Help manage employee records.
 When asked to perform actions (create, update, deactivate, list, summarize), ALWAYS use the provided tools.
 If required info is missing for creating an employee, ask for it clearly.
 Confirm every action after completing it. Be professional and concise.`,
-  })
+    })
 
-  const history = messages.slice(0, -1).map((msg: { role: string; content: string }) => ({
-    role: msg.role === 'assistant' ? 'model' : 'user',
-    parts: [{ text: msg.content }],
-  }))
+    const history = messages.slice(0, -1).map((msg: any) => ({
+      role: msg.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: msg.content }],
+    }))
 
-  const lastMessage = messages[messages.length - 1]
-  const chat = model.startChat({ history })
-  const result = await chat.sendMessage(lastMessage.content)
-  const response = result.response
-  const functionCalls = response.functionCalls()
+    const lastMessage = messages[messages.length - 1]
+    const chat = model.startChat({ history })
+    const result = await chat.sendMessage(lastMessage.content)
+    const response = result.response
+    const functionCalls = response.functionCalls()
 
-  if (functionCalls && functionCalls.length > 0) {
-    const functionResults = []
-    for (const call of functionCalls) {
-      const toolResult = await executeTool(call.name, call.args as Record<string, any>)
-      functionResults.push({
-        functionResponse: {
-          name: call.name,
-          response: { result: toolResult },
-        },
-      })
+    if (functionCalls && functionCalls.length > 0) {
+      const functionResults = []
+      for (const call of functionCalls) {
+        const toolResult = await executeTool(call.name, call.args as Record<string, any>)
+        functionResults.push({
+          functionResponse: {
+            name: call.name,
+            response: { result: toolResult },
+          },
+        })
+      }
+      const finalResult = await chat.sendMessage(functionResults as any)
+      return NextResponse.json({ reply: finalResult.response.text() })
     }
-    const finalResult = await chat.sendMessage(functionResults as any)
-    return NextResponse.json({ reply: finalResult.response.text() })
-  }
 
-  return NextResponse.json({ reply: response.text() })
+    return NextResponse.json({ reply: response.text() })
+
+  } catch (err: any) {
+    // ── 5. Catch everything and return readable error ───────
+    console.error('AI route fatal error:', err)
+    return NextResponse.json(
+      { reply: `❌ Server error: ${err.message ?? 'Unknown error'}` },
+      { status: 200 }
+    )
+  }
 }
