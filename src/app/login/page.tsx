@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { Eye, EyeOff, Loader2 } from 'lucide-react'
+import { Loader2, Mail, Lock } from 'lucide-react'
 
 export default function LoginPage() {
   const router   = useRouter()
@@ -30,247 +30,290 @@ export default function LoginPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', background: '#f8fafc' }}>
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: 'linear-gradient(135deg, #0a0f1e 0%, #0d1b2e 40%, #0a1628 70%, #0d2137 100%)',
+      position: 'relative',
+      overflow: 'hidden',
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    }}>
 
-      {/* LEFT — Illustration */}
+      {/* ── Circuit board SVG background ── */}
+      <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.25 }}
+        xmlns="http://www.w3.org/2000/svg">
+        {/* Horizontal lines */}
+        <line x1="0" y1="120" x2="600" y2="120" stroke="#00d4ff" strokeWidth="0.8" opacity="0.5" />
+        <line x1="0" y1="280" x2="400" y2="280" stroke="#00d4ff" strokeWidth="0.8" opacity="0.4" />
+        <line x1="200" y1="450" x2="800" y2="450" stroke="#00d4ff" strokeWidth="0.8" opacity="0.3" />
+        <line x1="900" y1="200" x2="1500" y2="200" stroke="#00d4ff" strokeWidth="0.8" opacity="0.4" />
+        <line x1="1000" y1="380" x2="1500" y2="380" stroke="#00d4ff" strokeWidth="0.8" opacity="0.3" />
+        <line x1="0" y1="600" x2="300" y2="600" stroke="#00d4ff" strokeWidth="0.8" opacity="0.3" />
+        <line x1="1100" y1="550" x2="1500" y2="550" stroke="#00d4ff" strokeWidth="0.8" opacity="0.4" />
+        <line x1="0" y1="750" x2="500" y2="750" stroke="#00d4ff" strokeWidth="0.8" opacity="0.3" />
+        {/* Vertical lines */}
+        <line x1="150" y1="0" x2="150" y2="400" stroke="#00d4ff" strokeWidth="0.8" opacity="0.4" />
+        <line x1="350" y1="200" x2="350" y2="700" stroke="#00d4ff" strokeWidth="0.8" opacity="0.3" />
+        <line x1="1200" y1="0" x2="1200" y2="350" stroke="#00d4ff" strokeWidth="0.8" opacity="0.4" />
+        <line x1="1380" y1="150" x2="1380" y2="600" stroke="#00d4ff" strokeWidth="0.8" opacity="0.3" />
+        <line x1="80" y1="500" x2="80" y2="900" stroke="#00d4ff" strokeWidth="0.8" opacity="0.3" />
+        <line x1="1450" y1="400" x2="1450" y2="900" stroke="#00d4ff" strokeWidth="0.8" opacity="0.3" />
+        {/* Circuit nodes (dots) */}
+        {[
+          [150,120],[350,280],[80,600],[1200,200],[1380,380],[1450,550],
+          [150,280],[350,120],[1200,380],[80,750],[1380,200],[350,450],
+        ].map(([x,y], i) => (
+          <circle key={i} cx={x} cy={y} r="4" fill="#00d4ff" opacity="0.7" />
+        ))}
+        {/* Small dots */}
+        {[
+          [150,200],[350,380],[80,680],[1200,280],[1380,460],
+          [250,120],[450,280],[180,450],[1300,200],[1480,380],
+        ].map(([x,y], i) => (
+          <circle key={`s${i}`} cx={x} cy={y} r="2" fill="#00d4ff" opacity="0.5" />
+        ))}
+        {/* L-shaped connectors */}
+        <path d="M150 120 L150 200 L350 200" stroke="#00d4ff" strokeWidth="0.8" fill="none" opacity="0.4" />
+        <path d="M350 280 L350 380 L1200 380" stroke="#00d4ff" strokeWidth="0.8" fill="none" opacity="0.3" />
+        <path d="M1200 200 L1380 200 L1380 380" stroke="#00d4ff" strokeWidth="0.8" fill="none" opacity="0.4" />
+        <path d="M80 600 L80 750 L350 750" stroke="#00d4ff" strokeWidth="0.8" fill="none" opacity="0.3" />
+        <path d="M1380 550 L1450 550 L1450 700" stroke="#00d4ff" strokeWidth="0.8" fill="none" opacity="0.3" />
+      </svg>
+
+      {/* ── Glowing orbs ── */}
       <div style={{
-        flex: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'linear-gradient(135deg, #eff6ff 0%, #eef2ff 50%, #ecfeff 100%)',
-        padding: '48px',
-        position: 'relative',
-        overflow: 'hidden',
-      }}>
-        {/* Decorative circles */}
-        <div style={{
-          position: 'absolute', width: '384px', height: '384px',
-          background: 'rgba(167,243,208,0.4)', borderRadius: '50%',
-          bottom: '-80px', left: '-80px',
-        }} />
-        <div style={{
-          position: 'absolute', width: '256px', height: '256px',
-          background: 'rgba(191,219,254,0.3)', borderRadius: '50%',
-          top: '40px', right: '40px',
-        }} />
-
-        {/* SVG Illustration */}
-        <div style={{ position: 'relative', zIndex: 10, textAlign: 'center', maxWidth: '420px' }}>
-          <svg viewBox="0 0 500 400" style={{ width: '100%', filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.08))' }} xmlns="http://www.w3.org/2000/svg">
-            {/* Employee card */}
-            <rect x="40" y="50" width="210" height="140" rx="14" fill="white" style={{ filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.10))' }} />
-            <circle cx="85" cy="95" r="24" fill="#e0e7ff" />
-            <circle cx="85" cy="89" r="11" fill="#6366f1" />
-            <ellipse cx="85" cy="112" rx="15" ry="9" fill="#6366f1" />
-            <rect x="118" y="80" width="105" height="9" rx="4" fill="#6366f1" opacity="0.7" />
-            <rect x="118" y="96" width="72" height="7" rx="3" fill="#cbd5e1" />
-            <rect x="68" y="128" width="160" height="7" rx="3" fill="#e2e8f0" />
-            <rect x="68" y="128" width="105" height="7" rx="3" fill="#6366f1" opacity="0.5" />
-            <circle cx="78" cy="162" r="5" fill="#6366f1" opacity="0.5" />
-            <circle cx="95" cy="162" r="5" fill="#10b981" opacity="0.5" />
-            <circle cx="112" cy="162" r="5" fill="#f59e0b" opacity="0.5" />
-            {/* Stats card */}
-            <rect x="285" y="30" width="175" height="115" rx="14" fill="white" style={{ filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.10))' }} />
-            <rect x="303" y="50" width="65" height="8" rx="3" fill="#6366f1" opacity="0.6" />
-            <rect x="303" y="65" width="125" height="7" rx="3" fill="#e2e8f0" />
-            <rect x="303" y="78" width="95" height="7" rx="3" fill="#e2e8f0" />
-            <rect x="303" y="102" width="15" height="25" rx="3" fill="#6366f1" opacity="0.4" />
-            <rect x="323" y="90"  width="15" height="37" rx="3" fill="#6366f1" opacity="0.7" />
-            <rect x="343" y="96"  width="15" height="31" rx="3" fill="#6366f1" opacity="0.5" />
-            <rect x="363" y="84"  width="15" height="43" rx="3" fill="#6366f1" opacity="0.9" />
-            <rect x="383" y="100" width="15" height="27" rx="3" fill="#6366f1" opacity="0.4" />
-            {/* Woman */}
-            <ellipse cx="195" cy="335" rx="48" ry="13" fill="#e2e8f0" opacity="0.5" />
-            <rect x="180" y="296" width="15" height="42" rx="7" fill="#3b5bdb" />
-            <rect x="199" y="296" width="15" height="42" rx="7" fill="#3b5bdb" />
-            <ellipse cx="196" cy="272" rx="30" ry="36" fill="#4f46e5" />
-            <ellipse cx="196" cy="246" rx="32" ry="30" fill="#3730a3" />
-            <circle cx="196" cy="210" r="26" fill="#fbbf24" opacity="0.9" />
-            <ellipse cx="196" cy="197" rx="26" ry="15" fill="#1e1b4b" />
-            <path d="M166 250 Q143 263 154 284" stroke="#fbbf24" strokeWidth="11" strokeLinecap="round" fill="none" opacity="0.9" />
-            <path d="M226 250 Q254 258 243 276" stroke="#fbbf24" strokeWidth="11" strokeLinecap="round" fill="none" opacity="0.9" />
-            <rect x="143" y="274" width="55" height="36" rx="6" fill="#e2e8f0" />
-            <rect x="146" y="277" width="49" height="28" rx="4" fill="#6366f1" opacity="0.25" />
-            <rect x="138" y="309" width="69" height="6" rx="3" fill="#cbd5e1" />
-            {/* Robot */}
-            <rect x="308" y="238" width="64" height="74" rx="13" fill="#06b6d4" opacity="0.9" />
-            <rect x="313" y="196" width="54" height="48" rx="13" fill="#0891b2" />
-            <circle cx="328" cy="215" r="8" fill="white" />
-            <circle cx="351" cy="215" r="8" fill="white" />
-            <circle cx="329" cy="216" r="4.5" fill="#06b6d4" />
-            <circle cx="352" cy="216" r="4.5" fill="#06b6d4" />
-            <path d="M326 230 Q340 239 354 230" stroke="white" strokeWidth="2.5" strokeLinecap="round" fill="none" />
-            <line x1="340" y1="196" x2="340" y2="180" stroke="#0891b2" strokeWidth="3.5" />
-            <circle cx="340" cy="176" r="6" fill="#22d3ee" />
-            <rect x="287" y="246" width="23" height="11" rx="5" fill="#0891b2" />
-            <rect x="370" y="246" width="23" height="11" rx="5" fill="#0891b2" />
-            <rect x="316" y="310" width="17" height="30" rx="8" fill="#0891b2" />
-            <rect x="347" y="310" width="17" height="30" rx="8" fill="#0891b2" />
-            <circle cx="340" cy="272" r="13" fill="white" opacity="0.25" />
-            <text x="340" y="277" textAnchor="middle" fontSize="11" fontWeight="bold" fill="white">AI</text>
-            {/* Sparkles */}
-            <circle cx="268" cy="158" r="5" fill="#f59e0b" opacity="0.7" />
-            <circle cx="445" cy="175" r="4" fill="#10b981" opacity="0.6" />
-            <circle cx="75"  cy="225" r="4" fill="#6366f1" opacity="0.5" />
-            <circle cx="425" cy="305" r="6" fill="#f59e0b" opacity="0.4" />
-          </svg>
-
-          <h2 style={{ fontSize: '22px', fontWeight: '700', color: '#334155', marginTop: '16px' }}>
-            Smart HR Management
-          </h2>
-          <p style={{ color: '#64748b', marginTop: '8px', fontSize: '14px', lineHeight: '1.6' }}>
-            Manage your team effortlessly with AI-powered tools.<br />
-            Create, update and summarize employee records instantly.
-          </p>
-        </div>
-      </div>
-
-      {/* RIGHT — Login Form */}
+        position: 'absolute', width: '500px', height: '500px',
+        background: 'radial-gradient(circle, rgba(0,150,255,0.08) 0%, transparent 70%)',
+        top: '-100px', left: '-100px', borderRadius: '50%',
+      }} />
       <div style={{
-        flex: 1,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '32px',
-        background: '#ffffff',
-      }}>
-        <div style={{ width: '100%', maxWidth: '420px' }}>
+        position: 'absolute', width: '400px', height: '400px',
+        background: 'radial-gradient(circle, rgba(0,212,255,0.06) 0%, transparent 70%)',
+        bottom: '-50px', right: '200px', borderRadius: '50%',
+      }} />
 
-          {/* Logo + Title */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '32px' }}>
-            <div style={{
-              width: '48px', height: '48px',
-              background: '#4f46e5',
-              borderRadius: '12px',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 4px 12px rgba(79,70,229,0.3)',
-            }}>
-              <svg style={{ width: '28px', height: '28px', color: 'white' }} fill="none" viewBox="0 0 24 24" stroke="white">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+      {/* ── Login Card ── */}
+      <div style={{
+        position: 'relative', zIndex: 10,
+        width: '100%', maxWidth: '440px',
+        margin: '24px',
+        background: 'rgba(13, 25, 50, 0.75)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        border: '1px solid rgba(0, 212, 255, 0.2)',
+        borderRadius: '20px',
+        padding: '48px 40px',
+        boxShadow: '0 0 60px rgba(0,150,255,0.1), 0 25px 50px rgba(0,0,0,0.5)',
+      }}>
+
+        {/* Logo */}
+        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+          <div style={{
+            display: 'inline-flex', alignItems: 'center',
+            justifyContent: 'center', marginBottom: '16px',
+          }}>
+            {/* M+AI logo */}
+            <div style={{ position: 'relative' }}>
+              <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
+                <defs>
+                  <linearGradient id="logoGrad" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stopColor="#60a5fa" />
+                    <stop offset="100%" stopColor="#00d4ff" />
+                  </linearGradient>
+                </defs>
+                {/* M letter */}
+                <path d="M8 48 L8 18 L24 36 L40 18 L40 48" stroke="url(#logoGrad)"
+                  strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                {/* AI circuit nodes */}
+                <circle cx="48" cy="16" r="4" fill="#00d4ff" />
+                <circle cx="58" cy="24" r="3" fill="#00d4ff" opacity="0.7" />
+                <circle cx="54" cy="34" r="3" fill="#00d4ff" opacity="0.7" />
+                <line x1="48" y1="16" x2="58" y2="24" stroke="#00d4ff" strokeWidth="1.5" opacity="0.8" />
+                <line x1="58" y1="24" x2="54" y2="34" stroke="#00d4ff" strokeWidth="1.5" opacity="0.8" />
+                <line x1="48" y1="16" x2="54" y2="34" stroke="#00d4ff" strokeWidth="1.5" opacity="0.5" />
+                {/* AI text */}
+                <text x="44" y="52" fontSize="10" fontWeight="bold" fill="#00d4ff">AI</text>
               </svg>
             </div>
-            <span style={{ fontSize: '18px', fontWeight: '700', color: '#1e293b' }}>
-              Mini AI HR Admin System
-            </span>
           </div>
+          <h1 style={{ color: '#e2e8f0', fontSize: '20px', fontWeight: '600', margin: 0 }}>
+            Mini AI HR Admin System
+          </h1>
+        </div>
 
-          {/* Card */}
-          <div style={{
-            background: '#ffffff',
-            borderRadius: '20px',
-            border: '1px solid #e2e8f0',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
-            padding: '36px',
-          }}>
-            <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#1e293b', marginBottom: '24px' }}>
-              HR Admin Login
-            </h2>
+        {/* Title */}
+        <h2 style={{
+          color: '#f1f5f9', fontSize: '26px', fontWeight: '700',
+          margin: '0 0 28px 0', textAlign: 'center',
+        }}>
+          Admin Login
+        </h2>
 
-            <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
-              {/* Error */}
-              {error && (
-                <div style={{
-                  background: '#fef2f2', border: '1px solid #fecaca',
-                  color: '#dc2626', padding: '12px 16px',
-                  borderRadius: '10px', fontSize: '14px',
-                }}>
-                  {error}
-                </div>
-              )}
+          {/* Error */}
+          {error && (
+            <div style={{
+              background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
+              color: '#fca5a5', padding: '12px 16px', borderRadius: '10px', fontSize: '13px',
+            }}>
+              {error}
+            </div>
+          )}
 
-              {/* Email */}
+          {/* Email */}
+          <div>
+            <label style={{ color: '#94a3b8', fontSize: '13px', fontWeight: '500', display: 'block', marginBottom: '8px' }}>
+              Work Email
+            </label>
+            <div style={{ position: 'relative' }}>
               <input
                 type="email"
                 required
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                placeholder="Work Email"
+                placeholder="Enter your work email"
                 style={{
-                  width: '100%', padding: '14px 16px',
-                  border: '2px solid #818cf8',
-                  borderRadius: '12px', fontSize: '14px',
-                  color: '#1e293b', outline: 'none',
-                  background: '#ffffff',
+                  width: '100%', padding: '13px 44px 13px 16px',
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(0,212,255,0.25)',
+                  borderRadius: '10px', fontSize: '14px',
+                  color: '#e2e8f0', outline: 'none',
                   boxSizing: 'border-box',
+                  transition: 'border-color 0.2s',
                 }}
-                onFocus={e => e.target.style.borderColor = '#4f46e5'}
-                onBlur={e => e.target.style.borderColor = '#818cf8'}
+                onFocus={e => e.target.style.borderColor = 'rgba(0,212,255,0.6)'}
+                onBlur={e => e.target.style.borderColor = 'rgba(0,212,255,0.25)'}
               />
-
-              {/* Password */}
-              <div style={{ position: 'relative' }}>
-                <input
-                  type={showPass ? 'text' : 'password'}
-                  required
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  placeholder="Password"
-                  style={{
-                    width: '100%', padding: '14px 48px 14px 16px',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '12px', fontSize: '14px',
-                    color: '#1e293b', outline: 'none',
-                    background: '#ffffff',
-                    boxSizing: 'border-box',
-                  }}
-                  onFocus={e => e.target.style.borderColor = '#818cf8'}
-                  onBlur={e => e.target.style.borderColor = '#e2e8f0'}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPass(!showPass)}
-                  style={{
-                    position: 'absolute', right: '14px',
-                    top: '50%', transform: 'translateY(-50%)',
-                    background: 'none', border: 'none',
-                    cursor: 'pointer', color: '#94a3b8', padding: '0',
-                  }}
-                >
-                  {showPass ? <EyeOff size={20} /> : <Eye size={20} />}
-                </button>
-              </div>
-
-              {/* Forgot */}
-              <div style={{ textAlign: 'right' }}>
-                <span style={{ fontSize: '14px', color: '#6366f1', cursor: 'pointer' }}>
-                  Forgot Password?
-                </span>
-              </div>
-
-              {/* Submit */}
-              <button
-                type="submit"
-                disabled={loading}
-                style={{
-                  width: '100%', padding: '14px',
-                  background: loading ? '#818cf8' : '#4f46e5',
-                  color: 'white', border: 'none',
-                  borderRadius: '12px', fontSize: '16px',
-                  fontWeight: '600', cursor: loading ? 'not-allowed' : 'pointer',
-                  display: 'flex', alignItems: 'center',
-                  justifyContent: 'center', gap: '8px',
-                  boxShadow: '0 4px 12px rgba(79,70,229,0.3)',
-                  transition: 'background 0.2s',
-                }}
-              >
-                {loading && <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} />}
-                {loading ? 'Signing in...' : 'Sign In'}
-              </button>
-
-            </form>
-
-            <p style={{ textAlign: 'center', color: '#94a3b8', fontSize: '13px', marginTop: '20px' }}>
-              Secured with Supabase Auth
-            </p>
+              <Mail size={16} color="#64748b" style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)' }} />
+            </div>
           </div>
 
-        </div>
+          {/* Password */}
+          <div>
+            <label style={{ color: '#94a3b8', fontSize: '13px', fontWeight: '500', display: 'block', marginBottom: '8px' }}>
+              Password
+            </label>
+            <div style={{ position: 'relative' }}>
+              <input
+                type={showPass ? 'text' : 'password'}
+                required
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                placeholder="••••••••••"
+                style={{
+                  width: '100%', padding: '13px 44px 13px 16px',
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(0,212,255,0.15)',
+                  borderRadius: '10px', fontSize: '14px',
+                  color: '#e2e8f0', outline: 'none',
+                  boxSizing: 'border-box',
+                  transition: 'border-color 0.2s',
+                }}
+                onFocus={e => e.target.style.borderColor = 'rgba(0,212,255,0.6)'}
+                onBlur={e => e.target.style.borderColor = 'rgba(0,212,255,0.15)'}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPass(!showPass)}
+                style={{
+                  position: 'absolute', right: '12px', top: '50%',
+                  transform: 'translateY(-50%)', background: 'none',
+                  border: 'none', cursor: 'pointer', padding: '2px',
+                  display: 'flex', alignItems: 'center',
+                }}
+              >
+                <Lock size={16} color="#64748b" />
+              </button>
+            </div>
+          </div>
+
+          {/* Sign In button */}
+          <button
+            type="submit"
+            disabled={loading}
+            style={{
+              width: '100%', padding: '14px',
+              background: 'linear-gradient(90deg, #0099ff 0%, #00d4ff 100%)',
+              border: 'none', borderRadius: '10px',
+              color: 'white', fontSize: '16px', fontWeight: '700',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              opacity: loading ? 0.8 : 1,
+              display: 'flex', alignItems: 'center',
+              justifyContent: 'center', gap: '8px',
+              boxShadow: '0 4px 20px rgba(0,180,255,0.35)',
+              marginTop: '4px',
+              transition: 'opacity 0.2s, transform 0.1s',
+            }}
+          >
+            {loading && <Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} />}
+            {loading ? 'Signing in...' : 'Sign In'}
+          </button>
+
+          {/* Forgot password */}
+          <p style={{ textAlign: 'center', margin: '4px 0 0', color: '#64748b', fontSize: '13px' }}>
+            <span style={{ color: '#00d4ff', cursor: 'pointer' }}>Forgot Password?</span>
+          </p>
+
+          {/* Divider */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '4px 0' }}>
+            <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.08)' }} />
+            <span style={{ color: '#475569', fontSize: '12px' }}>or sign in with SSO</span>
+            <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.08)' }} />
+          </div>
+
+          {/* SSO buttons */}
+          <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+            <div style={{
+              padding: '8px 14px', background: 'rgba(255,255,255,0.07)',
+              border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px',
+              color: '#94a3b8', fontSize: '12px', fontWeight: '600',
+              cursor: 'pointer',
+            }}>
+              SSO
+            </div>
+            <div style={{
+              padding: '8px 14px', background: 'rgba(255,255,255,0.07)',
+              border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px',
+              cursor: 'pointer', display: 'flex', alignItems: 'center',
+            }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="#00d4ff">
+                <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
+              </svg>
+            </div>
+          </div>
+
+          {/* Authorized only */}
+          <p style={{ textAlign: 'center', color: '#475569', fontSize: '12px', margin: '0' }}>
+            Authorized HR Admins Only
+          </p>
+
+        </form>
+
+        {/* Footer */}
+        <p style={{ textAlign: 'center', color: '#334155', fontSize: '12px', marginTop: '24px', marginBottom: 0 }}>
+          Secured by Supabase Auth
+        </p>
+
       </div>
 
+      {/* ── Sparkle bottom right ── */}
+      <div style={{ position: 'absolute', bottom: '32px', right: '32px', zIndex: 5 }}>
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+          <path d="M16 2 L17.5 14 L30 16 L17.5 18 L16 30 L14.5 18 L2 16 L14.5 14 Z"
+            fill="white" opacity="0.6" />
+        </svg>
+      </div>
+
+      <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        input::placeholder { color: #475569; }
+      `}</style>
     </div>
   )
 }
