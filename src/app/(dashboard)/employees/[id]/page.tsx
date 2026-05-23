@@ -2,7 +2,6 @@ import { getEmployee } from '@/lib/actions/employees'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { format } from 'date-fns'
-import { Pencil, ArrowLeft, Mail, Phone, MapPin, Calendar, Briefcase, User } from 'lucide-react'
 
 export default async function EmployeeProfilePage({ params }: { params: { id: string } }) {
   let employee
@@ -10,79 +9,131 @@ export default async function EmployeeProfilePage({ params }: { params: { id: st
   catch { notFound() }
 
   const details = [
-    { label: 'Email',           value: employee.email,           icon: Mail },
-    { label: 'Phone',           value: employee.phone,           icon: Phone },
-    { label: 'Location',        value: employee.work_location,   icon: MapPin },
-    { label: 'Joining Date',    value: employee.joining_date ? format(new Date(employee.joining_date), 'MMMM d, yyyy') : null, icon: Calendar },
-    { label: 'Employment Type', value: employee.employment_type, icon: Briefcase },
-    { label: 'Manager',         value: employee.manager_name,    icon: User },
+    { label: 'Email',           value: employee.email },
+    { label: 'Phone',           value: employee.phone },
+    { label: 'Location',        value: employee.work_location },
+    { label: 'Joining Date',    value: employee.joining_date ? format(new Date(employee.joining_date), 'MMMM d, yyyy') : null },
+    { label: 'Employment Type', value: employee.employment_type },
+    { label: 'Manager',         value: employee.manager_name },
   ]
 
   return (
-    <div className="max-w-3xl">
-      <Link href="/employees" className="flex items-center gap-2 text-slate-500 hover:text-slate-700 text-sm mb-6 transition-colors">
-        <ArrowLeft className="w-4 h-4" /> Back to employees
+    <div style={{ maxWidth: '800px', fontFamily: 'system-ui, sans-serif' }}>
+      <style>{`
+        .edit-btn:hover { box-shadow: 0 4px 20px rgba(0,180,255,0.4) !important; transform: translateY(-1px); }
+        .edit-btn { transition: all 0.2s; }
+        .back-link:hover { color: #00d4ff !important; }
+      `}</style>
+
+      {/* Back */}
+      <Link href="/employees" className="back-link" style={{
+        display: 'inline-flex', alignItems: 'center', gap: '6px',
+        color: '#475569', fontSize: '13px', textDecoration: 'none',
+        marginBottom: '24px', transition: 'color 0.2s',
+      }}>
+        ← Back to employees
       </Link>
 
-      {/* Header */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 mb-4">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-indigo-100 flex items-center justify-center text-2xl font-bold text-indigo-600">
+      {/* Profile header */}
+      <div style={{
+        background: 'rgba(13,25,50,0.7)', backdropFilter: 'blur(20px)',
+        border: '1px solid rgba(0,212,255,0.15)', borderRadius: '16px',
+        padding: '28px', marginBottom: '16px',
+        boxShadow: '0 4px 30px rgba(0,0,0,0.3)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            {/* Avatar */}
+            <div style={{
+              width: '64px', height: '64px', borderRadius: '14px', flexShrink: 0,
+              background: 'linear-gradient(135deg, rgba(0,153,255,0.4), rgba(0,212,255,0.2))',
+              border: '1px solid rgba(0,212,255,0.3)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '24px', fontWeight: '800', color: '#00d4ff',
+              boxShadow: '0 0 20px rgba(0,212,255,0.15)',
+            }}>
               {employee.full_name.charAt(0).toUpperCase()}
             </div>
             <div>
-              <h1 className="text-xl font-bold text-slate-800">{employee.full_name}</h1>
-              <p className="text-slate-500 text-sm mt-0.5">{employee.job_title}</p>
-              <p className="text-slate-400 text-xs mt-0.5">{employee.department}</p>
+              <h1 style={{ margin: '0 0 4px', fontSize: '22px', fontWeight: '700', color: '#f1f5f9' }}>
+                {employee.full_name}
+              </h1>
+              <p style={{ margin: '0 0 8px', color: '#64748b', fontSize: '14px' }}>{employee.job_title}</p>
+              <span style={{
+                fontSize: '11px', fontWeight: '600', padding: '4px 12px',
+                borderRadius: '20px', letterSpacing: '0.04em',
+                ...(employee.status === 'active'
+                  ? { color: '#00ff96', background: 'rgba(0,255,150,0.1)', border: '1px solid rgba(0,255,150,0.25)' }
+                  : { color: '#ff6b6b', background: 'rgba(255,107,107,0.1)', border: '1px solid rgba(255,107,107,0.25)' }
+                ),
+              }}>
+                {employee.status === 'active' ? '● Active' : '● Inactive'}
+              </span>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <span className={`text-xs px-3 py-1.5 rounded-full font-medium border ${
-              employee.status === 'active'
-                ? 'bg-green-50 text-green-700 border-green-200'
-                : 'bg-red-50 text-red-600 border-red-200'
-            }`}>
-              {employee.status === 'active' ? '● Active' : '● Inactive'}
-            </span>
-            <Link href={`/employees/${employee.id}/edit`}
-              className="flex items-center gap-1.5 text-sm bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-xl transition-colors shadow-sm">
-              <Pencil className="w-3.5 h-3.5" /> Edit
-            </Link>
-          </div>
+          <Link href={`/employees/${employee.id}/edit`} className="edit-btn" style={{
+            display: 'flex', alignItems: 'center', gap: '6px',
+            padding: '10px 20px',
+            background: 'linear-gradient(90deg, #0099ff, #00d4ff)',
+            borderRadius: '10px', color: 'white', textDecoration: 'none',
+            fontSize: '13px', fontWeight: '600',
+            boxShadow: '0 4px 16px rgba(0,180,255,0.3)',
+          }}>
+            ✏ Edit
+          </Link>
         </div>
       </div>
 
       {/* Details */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 mb-4">
-        <h2 className="font-semibold text-slate-800 mb-4 pb-3 border-b border-slate-100">Employee Details</h2>
-        <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {details.map(({ label, value, icon: Icon }) => (
-            <div key={label} className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <Icon className="w-4 h-4 text-slate-400" />
-              </div>
-              <div>
-                <dt className="text-xs text-slate-400 font-medium uppercase tracking-wide">{label}</dt>
-                <dd className="text-slate-700 text-sm mt-0.5">{value || '—'}</dd>
-              </div>
+      <div style={{
+        background: 'rgba(13,25,50,0.7)', backdropFilter: 'blur(20px)',
+        border: '1px solid rgba(0,212,255,0.15)', borderRadius: '16px',
+        padding: '28px', marginBottom: '16px',
+        boxShadow: '0 4px 30px rgba(0,0,0,0.3)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '24px', paddingBottom: '16px', borderBottom: '1px solid rgba(0,212,255,0.08)' }}>
+          <div style={{ width: '3px', height: '16px', background: 'linear-gradient(180deg, #00d4ff, #0099ff)', borderRadius: '2px' }} />
+          <h2 style={{ margin: 0, color: '#e2e8f0', fontSize: '14px', fontWeight: '600' }}>Employee Details</h2>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+          {details.map(({ label, value }) => (
+            <div key={label}>
+              <p style={{ margin: '0 0 4px', fontSize: '10px', fontWeight: '600', color: '#334155', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                {label}
+              </p>
+              <p style={{ margin: 0, fontSize: '14px', color: value ? '#94a3b8' : '#334155' }}>
+                {value || '—'}
+              </p>
             </div>
           ))}
-        </dl>
+        </div>
       </div>
 
       {/* AI Summary */}
       {employee.summary && (
-        <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-6">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-6 h-6 bg-indigo-600 rounded-lg flex items-center justify-center">
-              <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+        <div style={{
+          background: 'rgba(0,153,255,0.05)', backdropFilter: 'blur(20px)',
+          border: '1px solid rgba(0,212,255,0.2)', borderRadius: '16px',
+          padding: '28px', boxShadow: '0 4px 20px rgba(0,180,255,0.1)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+            <div style={{
+              width: '28px', height: '28px',
+              background: 'linear-gradient(135deg, #0099ff, #00d4ff)',
+              borderRadius: '8px', display: 'flex', alignItems: 'center',
+              justifyContent: 'center', boxShadow: '0 0 12px rgba(0,212,255,0.3)',
+            }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="white">
+                <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
               </svg>
             </div>
-            <h2 className="font-semibold text-indigo-700 text-sm">AI-Generated Summary</h2>
+            <h2 style={{ margin: 0, color: '#00d4ff', fontSize: '14px', fontWeight: '600' }}>
+              AI-Generated Summary
+            </h2>
           </div>
-          <p className="text-slate-600 text-sm leading-relaxed">{employee.summary}</p>
+          <p style={{ margin: 0, color: '#64748b', fontSize: '14px', lineHeight: '1.7' }}>
+            {employee.summary}
+          </p>
         </div>
       )}
     </div>
