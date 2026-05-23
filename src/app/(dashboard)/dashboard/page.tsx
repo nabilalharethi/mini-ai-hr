@@ -2,6 +2,9 @@ import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { format } from 'date-fns'
 
+export const dynamic = 'force-dynamic'
+
+
 export default async function DashboardPage() {
   const supabase = await createClient()
   const { data: employees } = await supabase
