@@ -1,92 +1,95 @@
 import { NextRequest, NextResponse } from 'next/server'
-import {
-  GoogleGenerativeAI,
-  FunctionDeclarationSchemaType,
-  type FunctionDeclaration,
-  type Tool,
-} from '@google/generative-ai'
+import { GoogleGenerativeAI } from '@google/generative-ai'
 import { createClient } from '@/lib/supabase/server'
-import { createEmployee, updateEmployee, deactivateEmployee, getEmployees, searchEmployees } from '@/lib/actions/employees'
+import {
+  createEmployee,
+  updateEmployee,
+  deactivateEmployee,
+  getEmployees,
+  searchEmployees,
+} from '@/lib/actions/employees'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
 
-const tools: Tool[] = [{
-  functionDeclarations: [
-    {
-      name: 'create_employee',
-      description: 'Create a new employee record in the HR system',
-      parameters: {
-        type: FunctionDeclarationSchemaType.OBJECT,
-        properties: {
-          full_name:       { type: FunctionDeclarationSchemaType.STRING, description: 'Full name' },
-          email:           { type: FunctionDeclarationSchemaType.STRING, description: 'Work email' },
-          phone:           { type: FunctionDeclarationSchemaType.STRING, description: 'Phone number' },
-          job_title:       { type: FunctionDeclarationSchemaType.STRING, description: 'Job title' },
-          department:      { type: FunctionDeclarationSchemaType.STRING, description: 'Department name' },
-          employment_type: { type: FunctionDeclarationSchemaType.STRING, description: 'full-time, part-time, contract, or intern' },
-          joining_date:    { type: FunctionDeclarationSchemaType.STRING, description: 'Start date YYYY-MM-DD' },
-          status:          { type: FunctionDeclarationSchemaType.STRING, description: 'active or inactive' },
-          manager_name:    { type: FunctionDeclarationSchemaType.STRING, description: 'Manager full name' },
-          work_location:   { type: FunctionDeclarationSchemaType.STRING, description: 'City or office' },
-        },
-        required: ['full_name', 'email', 'job_title', 'department'],
-      },
-    } as FunctionDeclaration,
-    {
-      name: 'search_and_update_employee',
-      description: 'Search for an employee by name and update their details',
-      parameters: {
-        type: FunctionDeclarationSchemaType.OBJECT,
-        properties: {
-          search_name:     { type: FunctionDeclarationSchemaType.STRING, description: 'Name to search for' },
-          full_name:       { type: FunctionDeclarationSchemaType.STRING },
-          email:           { type: FunctionDeclarationSchemaType.STRING },
-          phone:           { type: FunctionDeclarationSchemaType.STRING },
-          job_title:       { type: FunctionDeclarationSchemaType.STRING },
-          department:      { type: FunctionDeclarationSchemaType.STRING },
-          employment_type: { type: FunctionDeclarationSchemaType.STRING },
-          joining_date:    { type: FunctionDeclarationSchemaType.STRING },
-          status:          { type: FunctionDeclarationSchemaType.STRING },
-          manager_name:    { type: FunctionDeclarationSchemaType.STRING },
-          work_location:   { type: FunctionDeclarationSchemaType.STRING },
-        },
-        required: ['search_name'],
-      },
-    } as FunctionDeclaration,
-    {
-      name: 'deactivate_employee',
-      description: 'Deactivate an employee by searching their name',
-      parameters: {
-        type: FunctionDeclarationSchemaType.OBJECT,
-        properties: {
-          search_name: { type: FunctionDeclarationSchemaType.STRING, description: 'Name to search for' },
-        },
-        required: ['search_name'],
-      },
-    } as FunctionDeclaration,
-    {
-      name: 'list_employees',
-      description: 'List employees filtered by status',
-      parameters: {
-        type: FunctionDeclarationSchemaType.OBJECT,
-        properties: {
-          status: { type: FunctionDeclarationSchemaType.STRING, description: 'active, inactive, or all' },
+const tools = [
+  {
+    functionDeclarations: [
+      {
+        name: 'create_employee',
+        description: 'Create a new employee record in the HR system',
+        parameters: {
+          type: 'object',
+          properties: {
+            full_name:       { type: 'string', description: 'Full name' },
+            email:           { type: 'string', description: 'Work email' },
+            phone:           { type: 'string', description: 'Phone number' },
+            job_title:       { type: 'string', description: 'Job title' },
+            department:      { type: 'string', description: 'Department name' },
+            employment_type: { type: 'string', description: 'full-time, part-time, contract, or intern' },
+            joining_date:    { type: 'string', description: 'Start date YYYY-MM-DD' },
+            status:          { type: 'string', description: 'active or inactive' },
+            manager_name:    { type: 'string', description: 'Manager full name' },
+            work_location:   { type: 'string', description: 'City or office' },
+          },
+          required: ['full_name', 'email', 'job_title', 'department'],
         },
       },
-    } as FunctionDeclaration,
-    {
-      name: 'generate_employee_summary',
-      description: 'Generate a professional HR summary for an employee and save it',
-      parameters: {
-        type: FunctionDeclarationSchemaType.OBJECT,
-        properties: {
-          search_name: { type: FunctionDeclarationSchemaType.STRING, description: 'Name of employee' },
+      {
+        name: 'search_and_update_employee',
+        description: 'Search for an employee by name and update their details',
+        parameters: {
+          type: 'object',
+          properties: {
+            search_name:     { type: 'string', description: 'Name to search for' },
+            full_name:       { type: 'string' },
+            email:           { type: 'string' },
+            phone:           { type: 'string' },
+            job_title:       { type: 'string' },
+            department:      { type: 'string' },
+            employment_type: { type: 'string' },
+            joining_date:    { type: 'string' },
+            status:          { type: 'string' },
+            manager_name:    { type: 'string' },
+            work_location:   { type: 'string' },
+          },
+          required: ['search_name'],
         },
-        required: ['search_name'],
       },
-    } as FunctionDeclaration,
-  ],
-}]
+      {
+        name: 'deactivate_employee',
+        description: 'Deactivate an employee by searching their name',
+        parameters: {
+          type: 'object',
+          properties: {
+            search_name: { type: 'string', description: 'Name to search for' },
+          },
+          required: ['search_name'],
+        },
+      },
+      {
+        name: 'list_employees',
+        description: 'List employees filtered by status',
+        parameters: {
+          type: 'object',
+          properties: {
+            status: { type: 'string', description: 'active, inactive, or all' },
+          },
+        },
+      },
+      {
+        name: 'generate_employee_summary',
+        description: 'Generate a professional HR summary for an employee and save it',
+        parameters: {
+          type: 'object',
+          properties: {
+            search_name: { type: 'string', description: 'Name of employee' },
+          },
+          required: ['search_name'],
+        },
+      },
+    ],
+  },
+] as any
 
 async function executeTool(name: string, args: Record<string, any>): Promise<string> {
   try {
@@ -113,7 +116,10 @@ async function executeTool(name: string, args: Record<string, any>): Promise<str
         const { search_name, ...updates } = args
         const results = await searchEmployees(search_name)
         if (results.length === 0) return `ERROR: No employee found with name "${search_name}".`
-        const fields = ['full_name','email','phone','job_title','department','employment_type','joining_date','status','manager_name','work_location']
+        const fields = [
+          'full_name', 'email', 'phone', 'job_title', 'department',
+          'employment_type', 'joining_date', 'status', 'manager_name', 'work_location',
+        ]
         const clean: Record<string, any> = {}
         fields.forEach(f => { if (updates[f] !== undefined) clean[f] = updates[f] })
         const updated = await updateEmployee({ id: results[0].id, ...clean })
@@ -131,10 +137,12 @@ async function executeTool(name: string, args: Record<string, any>): Promise<str
       case 'list_employees': {
         const employees = await getEmployees()
         const filtered = (args.status && args.status !== 'all')
-          ? employees.filter(e => e.status === args.status)
+          ? employees.filter((e: any) => e.status === args.status)
           : employees
         if (filtered.length === 0) return `No employees found.`
-        const list = filtered.map(e => `- ${e.full_name} | ${e.job_title} | ${e.department} | ${e.status}`).join('\n')
+        const list = filtered
+          .map((e: any) => `- ${e.full_name} | ${e.job_title} | ${e.department} | ${e.status}`)
+          .join('\n')
         return `Found ${filtered.length} employee(s):\n${list}`
       }
 
@@ -191,10 +199,13 @@ Confirm every action after completing it. Be professional and concise.`,
     for (const call of functionCalls) {
       const toolResult = await executeTool(call.name, call.args as Record<string, any>)
       functionResults.push({
-        functionResponse: { name: call.name, response: { result: toolResult } },
+        functionResponse: {
+          name: call.name,
+          response: { result: toolResult },
+        },
       })
     }
-    const finalResult = await chat.sendMessage(functionResults)
+    const finalResult = await chat.sendMessage(functionResults as any)
     return NextResponse.json({ reply: finalResult.response.text() })
   }
 
