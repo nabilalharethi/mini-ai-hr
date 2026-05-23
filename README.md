@@ -1,36 +1,57 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Mini AI HR Admin System
 
-## Getting Started
+AI-powered HR admin app. Manage employee records through a normal UI
+or by typing natural language commands to the Gemini AI Assistant.
 
-First, run the development server:
+## Tech Stack
+- **Frontend**: Next.js 14, React, TypeScript, Tailwind CSS
+- **Backend / Database**: Supabase (PostgreSQL + Auth)
+- **AI**: Google Gemini 1.5 Flash with function calling
+- **Deployment**: Vercel
 
-```bash
+## Run Locally
+
+git clone https://github.com/nabilalharethi/mini-ai-hr.git
+cd mini-ai-hr
+npm install
+cp .env.example .env.local
+# Fill in your keys
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Environment Variables
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Variable | Where to get it |
+|---|---|
+| NEXT_PUBLIC_SUPABASE_URL | Supabase → Settings → API → Project URL |
+| NEXT_PUBLIC_SUPABASE_ANON_KEY | Supabase → Settings → API → anon key |
+| SUPABASE_SERVICE_ROLE_KEY | Supabase → Settings → API → service_role key |
+| GEMINI_API_KEY | aistudio.google.com → Get API key |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## How the AI Works
 
-## Learn More
+1. HR Admin types a natural language prompt
+2. Sent to `/api/ai` route
+3. Gemini 1.5 Flash receives it with 5 tool definitions
+4. Gemini decides which tool to call
+5. Tool runs a real Supabase database operation
+6. Result sent back to Gemini for a friendly reply
+7. Reply shown in chat
 
-To learn more about Next.js, take a look at the following resources:
+## Example Prompts
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `Show me all active employees`
+- `Create an employee named John Doe, email john@company.com, job title Software Engineer, department Engineering`
+- `Update John Doe's department to Product`
+- `Generate an employee summary for John Doe`
+- `Deactivate John Doe`
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Test Login
 
-## Deploy on Vercel
+- **Email**: admin@miniaihr.com
+- **Password**: Admin123!
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Known Limitations
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Chat history resets on page refresh
+- Employee name search is partial match
+- Gemini free tier: 15 requests/minute
