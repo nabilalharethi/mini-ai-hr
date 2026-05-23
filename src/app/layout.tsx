@@ -10,10 +10,17 @@ export const metadata: Metadata = {
   description: 'AI-powered HR Admin System',
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
   return (
-    <html lang="en">
-      <body className={`${inter.className} bg-slate-50 text-slate-800`}>
+    <html lang="en" suppressHydrationWarning>
+      <body
+        className={`${inter.className} bg-slate-50 text-slate-800`}
+        suppressHydrationWarning
+      >
         <Providers>{children}</Providers>
       </body>
     </html>
