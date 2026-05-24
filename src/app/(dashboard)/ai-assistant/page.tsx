@@ -20,7 +20,8 @@ export default function AIAssistantPage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput]       = useState('')
   const [loading, setLoading]   = useState(false)
-  const bottomRef = useRef<HTMLDivElement>(null)
+  const bottomRef  = useRef<HTMLDivElement>(null)
+  const inputRef   = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -33,6 +34,10 @@ export default function AIAssistantPage() {
     setMessages(updated)
     setInput('')
     setLoading(true)
+
+    // Keep focus on input after sending
+    setTimeout(() => inputRef.current?.focus(), 50)
+
     try {
       const res  = await fetch('/api/ai', {
         method: 'POST',
@@ -42,53 +47,112 @@ export default function AIAssistantPage() {
       const data = await res.json()
       setMessages(prev => [...prev, { role: 'assistant', content: data.reply }])
     } catch {
-      setMessages(prev => [...prev, { role: 'assistant', content: '❌ Something went wrong. Please try again.' }])
+      setMessages(prev => [
+        ...prev,
+        { role: 'assistant', content: '❌ Something went wrong. Please try again.' },
+      ])
     } finally {
       setLoading(false)
+      setTimeout(() => inputRef.current?.focus(), 50)
+    }
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Enter' && !e.shiftKey && !loading) {
+      e.preventDefault()
+      sendMessage(input)
     }
   }
 
   return (
-    <div className="max-w-3xl flex flex-col" style={{ height: 'calc(100vh - 4rem)' }}>
+    <div style={{ maxWidth: '768px', display: 'flex', flexDirection: 'column', height: 'calc(100vh - 4rem)', fontFamily: 'system-ui, sans-serif' }}>
 
       {/* Header */}
-      <div className="mb-5">
-        <div className="flex items-center gap-2 mb-1">
-          <div className="w-8 h-8 bg-indigo-600 rounded-xl flex items-center justify-center shadow-sm">
-            <Sparkles className="w-4 h-4 text-white" />
+      <div style={{ marginBottom: '20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+          <div style={{
+            width: '32px', height: '32px', background: 'linear-gradient(135deg, #0099ff, #00d4ff)',
+            borderRadius: '10px', display: 'flex', alignItems: 'center',
+            justifyContent: 'center', boxShadow: '0 0 12px rgba(0,212,255,0.3)',
+          }}>
+            <Sparkles size={16} color="white" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-800">AI HR Assistant</h1>
+          <h1 style={{ fontSize: '22px', fontWeight: '700', color: '#f1f5f9', margin: 0 }}>
+            AI HR Assistant
+          </h1>
         </div>
-        <p className="text-slate-500 text-sm ml-10">Powered by Google Gemini</p>
+        <p style={{ color: '#475569', fontSize: '13px', margin: 0, marginLeft: '40px' }}>
+          Powered by Groq — fast AI for HR management
+        </p>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto space-y-4 mb-4 pr-1">
+      <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '16px', paddingRight: '4px' }}>
 
         {/* Welcome */}
         {messages.length === 0 && (
-          <div className="space-y-4">
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center shadow-sm">
-                  <Bot className="w-4 h-4 text-white" />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{
+              background: 'rgba(13,25,50,0.7)', backdropFilter: 'blur(20px)',
+              borderRadius: '16px', border: '1px solid rgba(0,212,255,0.15)',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.3)', padding: '20px',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                <div style={{
+                  width: '36px', height: '36px',
+                  background: 'linear-gradient(135deg, #0099ff, #00d4ff)',
+                  borderRadius: '10px', display: 'flex', alignItems: 'center',
+                  justifyContent: 'center', boxShadow: '0 0 12px rgba(0,212,255,0.3)',
+                }}>
+                  <Bot size={18} color="white" />
                 </div>
                 <div>
-                  <p className="text-slate-800 font-semibold text-sm">Gemini HR Assistant</p>
-                  <p className="text-slate-400 text-xs">AI-powered · Ready to help</p>
+                  <p style={{ margin: 0, fontWeight: '600', color: '#e2e8f0', fontSize: '14px' }}>
+                    HR AI Assistant
+                  </p>
+                  <p style={{ margin: 0, color: '#00d4ff', fontSize: '11px' }}>
+                    Powered by Groq · Ready to help
+                  </p>
                 </div>
               </div>
-              <p className="text-slate-600 text-sm leading-relaxed">
+              <p style={{ margin: 0, color: '#64748b', fontSize: '14px', lineHeight: '1.6' }}>
                 Hello! I can help you manage employee records using natural language.
                 Try creating, viewing, updating, or deactivating employees — or ask me to generate a professional summary.
               </p>
             </div>
+
+            {/* Example prompts */}
             <div>
-              <p className="text-slate-400 text-xs uppercase tracking-wide font-medium mb-2 px-1">Try an example</p>
-              <div className="space-y-2">
+              <p style={{ margin: '0 0 8px 4px', color: '#334155', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: '600' }}>
+                Try an example
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {EXAMPLE_PROMPTS.map(prompt => (
-                  <button key={prompt} onClick={() => sendMessage(prompt)}
-                    className="w-full text-left text-sm bg-white border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50 text-slate-600 hover:text-indigo-700 px-4 py-3 rounded-xl transition-all shadow-sm">
+                  <button
+                    key={prompt}
+                    onClick={() => sendMessage(prompt)}
+                    style={{
+                      textAlign: 'left', fontSize: '13px',
+                      background: 'rgba(13,25,50,0.7)',
+                      border: '1px solid rgba(0,212,255,0.15)',
+                      color: '#64748b', padding: '12px 16px',
+                      borderRadius: '12px', cursor: 'pointer',
+                      transition: 'all 0.15s',
+                      backdropFilter: 'blur(20px)',
+                    }}
+                    onMouseEnter={e => {
+                      const t = e.currentTarget
+                      t.style.borderColor = 'rgba(0,212,255,0.4)'
+                      t.style.color = '#00d4ff'
+                      t.style.background = 'rgba(0,212,255,0.05)'
+                    }}
+                    onMouseLeave={e => {
+                      const t = e.currentTarget
+                      t.style.borderColor = 'rgba(0,212,255,0.15)'
+                      t.style.color = '#64748b'
+                      t.style.background = 'rgba(13,25,50,0.7)'
+                    }}
+                  >
                     {prompt}
                   </button>
                 ))}
@@ -97,22 +161,48 @@ export default function AIAssistantPage() {
           </div>
         )}
 
-        {/* Bubbles */}
+        {/* Message bubbles */}
         {messages.map((msg, i) => (
-          <div key={i} className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
-            <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm ${
-              msg.role === 'user' ? 'bg-slate-200' : 'bg-indigo-600'
-            }`}>
+          <div key={i} style={{
+            display: 'flex', gap: '10px',
+            flexDirection: msg.role === 'user' ? 'row-reverse' : 'row',
+          }}>
+            <div style={{
+              width: '32px', height: '32px', borderRadius: '10px', flexShrink: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: msg.role === 'user'
+                ? 'rgba(255,255,255,0.08)'
+                : 'linear-gradient(135deg, #0099ff, #00d4ff)',
+              boxShadow: msg.role === 'user'
+                ? 'none'
+                : '0 0 10px rgba(0,212,255,0.3)',
+            }}>
               {msg.role === 'user'
-                ? <User className="w-4 h-4 text-slate-600" />
-                : <Bot className="w-4 h-4 text-white" />
+                ? <User size={16} color="#64748b" />
+                : <Bot size={16} color="white" />
               }
             </div>
-            <div className={`max-w-[82%] rounded-2xl px-4 py-3 text-sm whitespace-pre-wrap shadow-sm ${
-              msg.role === 'user'
-                ? 'bg-indigo-600 text-white rounded-tr-sm'
-                : 'bg-white border border-slate-200 text-slate-700 rounded-tl-sm'
-            }`}>
+            <div style={{
+              maxWidth: '82%', borderRadius: '16px',
+              padding: '12px 16px', fontSize: '14px',
+              lineHeight: '1.6', whiteSpace: 'pre-wrap',
+              ...(msg.role === 'user'
+                ? {
+                    background: 'linear-gradient(135deg, #0099ff, #00d4ff)',
+                    color: 'white',
+                    borderTopRightRadius: '4px',
+                    boxShadow: '0 4px 12px rgba(0,180,255,0.3)',
+                  }
+                : {
+                    background: 'rgba(13,25,50,0.7)',
+                    backdropFilter: 'blur(20px)',
+                    border: '1px solid rgba(0,212,255,0.15)',
+                    color: '#94a3b8',
+                    borderTopLeftRadius: '4px',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+                  }
+              ),
+            }}>
               {msg.content}
             </div>
           </div>
@@ -120,38 +210,92 @@ export default function AIAssistantPage() {
 
         {/* Typing indicator */}
         {loading && (
-          <div className="flex gap-3">
-            <div className="w-8 h-8 bg-indigo-600 rounded-xl flex items-center justify-center shadow-sm">
-              <Bot className="w-4 h-4 text-white" />
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <div style={{
+              width: '32px', height: '32px',
+              background: 'linear-gradient(135deg, #0099ff, #00d4ff)',
+              borderRadius: '10px', display: 'flex', alignItems: 'center',
+              justifyContent: 'center', boxShadow: '0 0 10px rgba(0,212,255,0.3)',
+            }}>
+              <Bot size={16} color="white" />
             </div>
-            <div className="bg-white border border-slate-200 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm">
-              <div className="flex items-center gap-1.5">
-                <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-              </div>
+            <div style={{
+              background: 'rgba(13,25,50,0.7)', backdropFilter: 'blur(20px)',
+              border: '1px solid rgba(0,212,255,0.15)',
+              borderRadius: '16px', borderTopLeftRadius: '4px',
+              padding: '12px 16px',
+              display: 'flex', alignItems: 'center', gap: '6px',
+            }}>
+              {[0, 150, 300].map(delay => (
+                <div key={delay} style={{
+                  width: '8px', height: '8px',
+                  background: '#00d4ff', borderRadius: '50%',
+                  animation: 'bounce 1s infinite',
+                  animationDelay: `${delay}ms`,
+                  boxShadow: '0 0 6px rgba(0,212,255,0.5)',
+                }} />
+              ))}
             </div>
           </div>
         )}
         <div ref={bottomRef} />
       </div>
 
-      {/* Input */}
-      <div className="flex gap-3 bg-white border border-slate-200 rounded-2xl p-2 shadow-sm">
+      {/* Input bar */}
+      <div style={{
+        display: 'flex', gap: '10px',
+        background: 'rgba(13,25,50,0.7)',
+        backdropFilter: 'blur(20px)',
+        border: '1px solid rgba(0,212,255,0.2)',
+        borderRadius: '16px', padding: '8px',
+        boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+      }}>
         <input
+          ref={inputRef}
           type="text"
           value={input}
           onChange={e => setInput(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendMessage(input)}
+          onKeyDown={handleKeyDown}
           placeholder="Ask me anything about your employees..."
-          className="flex-1 bg-transparent text-slate-800 placeholder-slate-400 px-3 py-2 text-sm outline-none"
+          style={{
+            flex: 1, background: 'transparent', border: 'none',
+            color: '#e2e8f0', padding: '10px 12px',
+            fontSize: '14px', outline: 'none',
+            fontFamily: 'system-ui, sans-serif',
+          }}
         />
-        <button onClick={() => sendMessage(input)} disabled={!input.trim() || loading}
-          className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white p-2.5 rounded-xl transition-colors shadow-sm">
-          <Send className="w-4 h-4" />
+        <button
+          onClick={() => sendMessage(input)}
+          disabled={!input.trim() || loading}
+          style={{
+            background: !input.trim() || loading
+              ? 'rgba(255,255,255,0.05)'
+              : 'linear-gradient(135deg, #0099ff, #00d4ff)',
+            border: 'none', borderRadius: '12px',
+            padding: '10px 14px', cursor: !input.trim() || loading ? 'not-allowed' : 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            transition: 'all 0.2s',
+            boxShadow: !input.trim() || loading ? 'none' : '0 0 12px rgba(0,180,255,0.3)',
+          }}
+        >
+          {loading
+            ? <Loader2 size={18} color="#334155" style={{ animation: 'spin 1s linear infinite' }} />
+            : <Send size={18} color={!input.trim() ? '#334155' : 'white'} />
+          }
         </button>
       </div>
 
+      <style>{`
+        @keyframes bounce {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-5px); }
+        }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        input::placeholder { color: #334155; }
+      `}</style>
     </div>
   )
 }
