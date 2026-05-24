@@ -8,58 +8,38 @@ import {
   searchEmployees,
 } from '@/lib/actions/employees'
 
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY ?? ''
+const GROQ_API_KEY = process.env.GROQ_API_KEY ?? ''
+const MODEL = 'llama-3.3-70b-versatile'
 
-const MODELS = [
-  'qwen/qwen3-next-80b-a3b-instruct:free',
-]
+// ── Call Groq API ─────────────────────────────────────────────
+async function callGroq(messages: any[]) {
+  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${GROQ_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: MODEL,
+      messages,
+      temperature: 0.1,
+      max_tokens: 1024,
+    }),
+  })
 
-// ── Call OpenRouter with automatic fallback ───────────────────
-async function callOpenRouter(messages: any[]) {
-  let lastError = ''
-
-  for (const model of MODELS) {
-    try {
-      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-          'Content-Type': 'application/json',
-          'HTTP-Referer': 'https://mini-ai-hr.vercel.app',
-          'X-Title': 'Mini AI HR',
-        },
-        body: JSON.stringify({ model, messages }),
-      })
-
-      if (!res.ok) {
-        const err = await res.text()
-        if (res.status === 429 || res.status === 402) {
-          lastError = `${model} unavailable`
-          continue
-        }
-        throw new Error(`OpenRouter error: ${err}`)
-      }
-
-      const data = await res.json()
-      if (data.choices?.[0]?.message?.content) {
-        return data
-      }
-      lastError = `${model} returned empty response`
-      continue
-
-    } catch (err: any) {
-      lastError = err.message
-      continue
-    }
+  if (!res.ok) {
+    const err = await res.text()
+    throw new Error(`Groq error: ${err}`)
   }
 
-  throw new Error(`All models failed. Last error: ${lastError}`)
+  const data = await res.json()
+  return data
 }
 
 // ── Parse JSON from AI response ───────────────────────────────
 function parseJSON(text: string): any {
   try {
-    // Remove thinking tags if present
+    // Clean any thinking tags
     const cleaned = text
       .replace(/<think>[\s\S]*?<\/think>/g, '')
       .replace(/<thinking>[\s\S]*?<\/thinking>/g, '')
@@ -76,65 +56,88 @@ function parseJSON(text: string): any {
 
 export async function POST(req: NextRequest) {
   try {
-    if (!OPENROUTER_API_KEY) {
-      return NextResponse.json({ reply: '❌ OPENROUTER_API_KEY is not configured.' })
+    // 1. Check API key
+    if (!GROQ_API_KEY) {
+      return NextResponse.json({
+        reply: '❌ GROQ_API_KEY is not configured. Please add it to your environment variables.',
+      })
     }
 
+    // 2. Auth check
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ reply: '❌ Not authenticated.' })
+    if (!user) {
+      return NextResponse.json({ reply: '❌ Not authenticated. Please log in again.' })
+    }
 
+    // 3. Parse messages
     const { messages } = await req.json()
-    if (!messages?.length) return NextResponse.json({ reply: 'No message received.' })
+    if (!messages?.length) {
+      return NextResponse.json({ reply: 'No message received.' })
+    }
 
     const userMessage = messages[messages.length - 1].content
 
-    // ── Step 1: Classify intent ───────────────────────────────
+    // 4. Classify intent
     const classifyMessages = [
       {
         role: 'system',
         content: `You are an HR assistant. Classify the user request into one of these actions and extract data as JSON.
 
 Actions:
-- list_employees: user wants to see employees. JSON: {"action":"list_employees","status":"active"|"inactive"|"all"}
-- create_employee: user wants to create an employee. JSON: {"action":"create_employee","full_name":"...","email":"...","job_title":"...","department":"...","phone":"...","employment_type":"...","joining_date":"...","status":"active","manager_name":"...","work_location":"..."}
-- update_employee: user wants to update an employee. JSON: {"action":"update_employee","search_name":"...","job_title":"...","department":"...","status":"...","phone":"...","employment_type":"...","joining_date":"...","manager_name":"...","work_location":"...","email":"...","full_name":"..."}
-- deactivate_employee: user wants to deactivate. JSON: {"action":"deactivate_employee","search_name":"..."}
-- generate_summary: user wants an AI summary. JSON: {"action":"generate_summary","search_name":"..."}
-- unknown: none of the above. JSON: {"action":"unknown"}
+- list_employees: user wants to see/show employees
+  JSON: {"action":"list_employees","status":"active"|"inactive"|"all"}
 
-IMPORTANT: Respond with ONLY the JSON object. No explanation, no markdown, no thinking, just raw JSON.`,
+- create_employee: user wants to create/add an employee
+  JSON: {"action":"create_employee","full_name":"...","email":"...","job_title":"...","department":"...","phone":"...","employment_type":"full-time|part-time|contract|intern","joining_date":"YYYY-MM-DD","status":"active","manager_name":"...","work_location":"..."}
+
+- update_employee: user wants to update/change/edit an employee
+  JSON: {"action":"update_employee","search_name":"...","full_name":"...","email":"...","phone":"...","job_title":"...","department":"...","employment_type":"...","joining_date":"...","status":"...","manager_name":"...","work_location":"..."}
+
+- deactivate_employee: user wants to deactivate/remove/fire an employee
+  JSON: {"action":"deactivate_employee","search_name":"..."}
+
+- generate_summary: user wants a summary/bio/profile for an employee
+  JSON: {"action":"generate_summary","search_name":"..."}
+
+- unknown: none of the above
+  JSON: {"action":"unknown"}
+
+CRITICAL RULES:
+- Respond with ONLY the JSON object
+- No explanation, no markdown code blocks, no extra text
+- Just the raw JSON starting with { and ending with }
+- Only include fields that were mentioned by the user`,
       },
       { role: 'user', content: userMessage },
     ]
 
-    const classifyResponse = await callOpenRouter(classifyMessages)
+    const classifyResponse = await callGroq(classifyMessages)
     const classifyText = classifyResponse.choices?.[0]?.message?.content ?? ''
     const intent = parseJSON(classifyText)
 
+    // 5. If no intent detected — normal conversation
     if (!intent || intent.action === 'unknown') {
-      // ── Normal conversation ───────────────────────────────
       const chatMessages = [
         {
           role: 'system',
-          content: 'You are a helpful HR Admin AI assistant. Help the HR admin with employee management questions. Be professional and concise. Do not show thinking or reasoning traces.',
+          content: `You are a helpful HR Admin AI assistant for Mini AI HR system. 
+Help the HR admin with employee management questions.
+Be professional, friendly and concise.
+You can help with: creating employees, viewing employees, updating records, deactivating employees, and generating summaries.
+If the user wants to perform an action, guide them on how to phrase it.`,
         },
         ...messages.map((m: any) => ({
           role: m.role === 'assistant' ? 'assistant' : 'user',
           content: m.content,
         })),
       ]
-      const chatResponse = await callOpenRouter(chatMessages)
-      const rawReply = chatResponse.choices?.[0]?.message?.content ?? 'I could not understand that request.'
-      // Clean thinking tags from response
-      const cleanReply = rawReply
-        .replace(/<think>[\s\S]*?<\/think>/g, '')
-        .replace(/<thinking>[\s\S]*?<\/thinking>/g, '')
-        .trim()
-      return NextResponse.json({ reply: cleanReply })
+      const chatResponse = await callGroq(chatMessages)
+      const reply = chatResponse.choices?.[0]?.message?.content ?? 'I could not understand that request.'
+      return NextResponse.json({ reply })
     }
 
-    // ── Step 2: Execute the action ────────────────────────────
+    // 6. Execute the action
     let result = ''
 
     switch (intent.action) {
@@ -145,12 +148,13 @@ IMPORTANT: Respond with ONLY the JSON object. No explanation, no markdown, no th
         const filtered = status === 'all'
           ? employees
           : employees.filter((e: any) => e.status === status)
+
         if (filtered.length === 0) {
-          result = `No ${status !== 'all' ? status : ''} employees found.`
+          result = `No ${status !== 'all' ? status + ' ' : ''}employees found.`
         } else {
-          const list = filtered.map((e: any) =>
-            `• **${e.full_name}** — ${e.job_title}, ${e.department} (${e.status})`
-          ).join('\n')
+          const list = filtered
+            .map((e: any) => `• **${e.full_name}** — ${e.job_title}, ${e.department} (${e.status})`)
+            .join('\n')
           result = `Found ${filtered.length} employee(s):\n\n${list}`
         }
         break
@@ -160,7 +164,7 @@ IMPORTANT: Respond with ONLY the JSON object. No explanation, no markdown, no th
         const required = ['full_name', 'email', 'job_title', 'department']
         const missing = required.filter(f => !intent[f])
         if (missing.length > 0) {
-          result = `I need a bit more information. Please provide: ${missing.join(', ')}.`
+          result = `I need a bit more information to create this employee. Please provide:\n${missing.map(f => `• ${f.replace('_', ' ')}`).join('\n')}`
           break
         }
         const emp = await createEmployee({
@@ -176,14 +180,18 @@ IMPORTANT: Respond with ONLY the JSON object. No explanation, no markdown, no th
           work_location:   intent.work_location ?? null,
           summary:         null,
         })
-        result = `✅ Employee **${emp.full_name}** has been created successfully as ${emp.job_title} in the ${emp.department} department.`
+        result = `✅ Employee **${emp.full_name}** has been created successfully!\n\n• Job Title: ${emp.job_title}\n• Department: ${emp.department}\n• Status: ${emp.status}`
         break
       }
 
       case 'update_employee': {
+        if (!intent.search_name) {
+          result = `❌ Please specify which employee you want to update.`
+          break
+        }
         const results = await searchEmployees(intent.search_name)
         if (results.length === 0) {
-          result = `❌ No employee found with name "${intent.search_name}".`
+          result = `❌ No employee found with name "${intent.search_name}". Please check the name and try again.`
           break
         }
         const fields = [
@@ -191,17 +199,23 @@ IMPORTANT: Respond with ONLY the JSON object. No explanation, no markdown, no th
           'employment_type', 'joining_date', 'status', 'manager_name', 'work_location',
         ]
         const clean: Record<string, any> = {}
-        fields.forEach(f => { if (intent[f] !== undefined) clean[f] = intent[f] })
+        fields.forEach(f => {
+          if (intent[f] !== undefined && f !== 'search_name') clean[f] = intent[f]
+        })
         if (Object.keys(clean).length === 0) {
-          result = `❌ No fields to update were found in your request.`
+          result = `❌ No fields to update were found. Please specify what you want to change.`
           break
         }
         const updated = await updateEmployee({ id: results[0].id, ...clean })
-        result = `✅ **${updated.full_name}** has been updated. Changed: ${Object.keys(clean).join(', ')}.`
+        result = `✅ **${updated.full_name}** has been updated successfully!\n\nChanged fields: ${Object.keys(clean).map(f => f.replace('_', ' ')).join(', ')}`
         break
       }
 
       case 'deactivate_employee': {
+        if (!intent.search_name) {
+          result = `❌ Please specify which employee you want to deactivate.`
+          break
+        }
         const results = await searchEmployees(intent.search_name)
         if (results.length === 0) {
           result = `❌ No employee found with name "${intent.search_name}".`
@@ -217,6 +231,10 @@ IMPORTANT: Respond with ONLY the JSON object. No explanation, no markdown, no th
       }
 
       case 'generate_summary': {
+        if (!intent.search_name) {
+          result = `❌ Please specify which employee you want a summary for.`
+          break
+        }
         const results = await searchEmployees(intent.search_name)
         if (results.length === 0) {
           result = `❌ No employee found with name "${intent.search_name}".`
@@ -226,26 +244,34 @@ IMPORTANT: Respond with ONLY the JSON object. No explanation, no markdown, no th
         const summaryMessages = [
           {
             role: 'system',
-            content: 'You are an HR writer. Write professional employee bios. Return only the bio text with no thinking, no explanation, no extra formatting.',
+            content: 'You are an HR writer. Write professional, concise employee bios. Return only the bio text with no extra formatting or explanation.',
           },
           {
             role: 'user',
-            content: `Write a professional 2-3 sentence HR bio for: ${emp.full_name}, ${emp.job_title} in ${emp.department}. Employment: ${emp.employment_type}. Location: ${emp.work_location ?? 'unknown'}. Manager: ${emp.manager_name ?? 'unknown'}. Joined: ${emp.joining_date ?? 'unknown'}. Status: ${emp.status}.`,
+            content: `Write a professional 2-3 sentence HR bio for this employee:
+Name: ${emp.full_name}
+Job Title: ${emp.job_title}
+Department: ${emp.department}
+Employment Type: ${emp.employment_type}
+Location: ${emp.work_location ?? 'not specified'}
+Manager: ${emp.manager_name ?? 'not specified'}
+Joined: ${emp.joining_date ?? 'not specified'}
+Status: ${emp.status}`,
           },
         ]
-        const summaryResponse = await callOpenRouter(summaryMessages)
-        const rawSummary = summaryResponse.choices?.[0]?.message?.content ?? ''
-        const summary = rawSummary
-          .replace(/<think>[\s\S]*?<\/think>/g, '')
-          .replace(/<thinking>[\s\S]*?<\/thinking>/g, '')
-          .trim()
+        const summaryResponse = await callGroq(summaryMessages)
+        const summary = summaryResponse.choices?.[0]?.message?.content?.trim() ?? ''
+        if (!summary) {
+          result = `❌ Could not generate summary. Please try again.`
+          break
+        }
         await updateEmployee({ id: emp.id, summary })
-        result = `✅ Summary generated and saved for **${emp.full_name}**:\n\n${summary}`
+        result = `✅ Summary generated and saved for **${emp.full_name}**:\n\n${summary}\n\nYou can view it on their profile page.`
         break
       }
 
       default:
-        result = 'I could not understand that request. Please try again.'
+        result = 'I could not understand that request. Please try again with a clearer instruction.'
     }
 
     return NextResponse.json({ reply: result })
@@ -253,7 +279,7 @@ IMPORTANT: Respond with ONLY the JSON object. No explanation, no markdown, no th
   } catch (err: any) {
     console.error('AI route error:', err)
     return NextResponse.json({
-      reply: `❌ Error: ${err.message ?? 'Unknown error'}`,
+      reply: `❌ Error: ${err.message ?? 'Unknown error occurred'}`,
     })
   }
 }
