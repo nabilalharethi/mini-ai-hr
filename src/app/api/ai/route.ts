@@ -10,7 +10,7 @@ import {
 
 // ── OpenRouter config ─────────────────────────────────────────
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY ?? ''
-const MODEL = 'deepseek/deepseek-v4-flash:free' // free model on OpenRouter
+const MODEL = 'meta-llama/llama-3.2-3b-instruct:free' // free model on OpenRouter
 
 // ── Tool definitions (OpenAI-compatible format) ───────────────
 const tools = [
