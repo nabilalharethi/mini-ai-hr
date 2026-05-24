@@ -10,12 +10,8 @@ import {
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY ?? ''
 
-// Free models in priority order — falls back if one is rate limited
 const MODELS = [
-  'meta-llama/llama-3.3-70b-instruct:free',
-  'meta-llama/llama-3.1-8b-instruct:free',
-  'mistralai/mistral-7b-instruct:free',
-  'google/gemma-3-4b-it:free',
+  'qwen/qwen3-next-80b-a3b-instruct:free',
 ]
 
 // ── Call OpenRouter with automatic fallback ───────────────────
@@ -63,9 +59,15 @@ async function callOpenRouter(messages: any[]) {
 // ── Parse JSON from AI response ───────────────────────────────
 function parseJSON(text: string): any {
   try {
-    const match = text.match(/```json\n?([\s\S]*?)\n?```/) ||
-                  text.match(/\{[\s\S]*\}/)
-    const jsonStr = match ? (match[1] || match[0]) : text
+    // Remove thinking tags if present
+    const cleaned = text
+      .replace(/<think>[\s\S]*?<\/think>/g, '')
+      .replace(/<thinking>[\s\S]*?<\/thinking>/g, '')
+      .trim()
+
+    const match = cleaned.match(/```json\n?([\s\S]*?)\n?```/) ||
+                  cleaned.match(/\{[\s\S]*\}/)
+    const jsonStr = match ? (match[1] || match[0]) : cleaned
     return JSON.parse(jsonStr)
   } catch {
     return null
@@ -101,7 +103,7 @@ Actions:
 - generate_summary: user wants an AI summary. JSON: {"action":"generate_summary","search_name":"..."}
 - unknown: none of the above. JSON: {"action":"unknown"}
 
-Respond with ONLY the JSON object, nothing else. No explanation, no markdown, just raw JSON.`,
+IMPORTANT: Respond with ONLY the JSON object. No explanation, no markdown, no thinking, just raw JSON.`,
       },
       { role: 'user', content: userMessage },
     ]
@@ -115,7 +117,7 @@ Respond with ONLY the JSON object, nothing else. No explanation, no markdown, ju
       const chatMessages = [
         {
           role: 'system',
-          content: 'You are a helpful HR Admin AI assistant. Help the HR admin with employee management questions. Be professional and concise.',
+          content: 'You are a helpful HR Admin AI assistant. Help the HR admin with employee management questions. Be professional and concise. Do not show thinking or reasoning traces.',
         },
         ...messages.map((m: any) => ({
           role: m.role === 'assistant' ? 'assistant' : 'user',
@@ -123,9 +125,13 @@ Respond with ONLY the JSON object, nothing else. No explanation, no markdown, ju
         })),
       ]
       const chatResponse = await callOpenRouter(chatMessages)
-      return NextResponse.json({
-        reply: chatResponse.choices?.[0]?.message?.content ?? 'I could not understand that request.',
-      })
+      const rawReply = chatResponse.choices?.[0]?.message?.content ?? 'I could not understand that request.'
+      // Clean thinking tags from response
+      const cleanReply = rawReply
+        .replace(/<think>[\s\S]*?<\/think>/g, '')
+        .replace(/<thinking>[\s\S]*?<\/thinking>/g, '')
+        .trim()
+      return NextResponse.json({ reply: cleanReply })
     }
 
     // ── Step 2: Execute the action ────────────────────────────
@@ -219,12 +225,20 @@ Respond with ONLY the JSON object, nothing else. No explanation, no markdown, ju
         const emp = results[0]
         const summaryMessages = [
           {
+            role: 'system',
+            content: 'You are an HR writer. Write professional employee bios. Return only the bio text with no thinking, no explanation, no extra formatting.',
+          },
+          {
             role: 'user',
-            content: `Write a professional 2-3 sentence HR bio for: ${emp.full_name}, ${emp.job_title} in ${emp.department}. Employment: ${emp.employment_type}. Location: ${emp.work_location ?? 'unknown'}. Manager: ${emp.manager_name ?? 'unknown'}. Joined: ${emp.joining_date ?? 'unknown'}. Status: ${emp.status}. Keep it concise and professional. Return only the bio text, no extra formatting.`,
+            content: `Write a professional 2-3 sentence HR bio for: ${emp.full_name}, ${emp.job_title} in ${emp.department}. Employment: ${emp.employment_type}. Location: ${emp.work_location ?? 'unknown'}. Manager: ${emp.manager_name ?? 'unknown'}. Joined: ${emp.joining_date ?? 'unknown'}. Status: ${emp.status}.`,
           },
         ]
         const summaryResponse = await callOpenRouter(summaryMessages)
-        const summary = summaryResponse.choices?.[0]?.message?.content ?? ''
+        const rawSummary = summaryResponse.choices?.[0]?.message?.content ?? ''
+        const summary = rawSummary
+          .replace(/<think>[\s\S]*?<\/think>/g, '')
+          .replace(/<thinking>[\s\S]*?<\/thinking>/g, '')
+          .trim()
         await updateEmployee({ id: emp.id, summary })
         result = `✅ Summary generated and saved for **${emp.full_name}**:\n\n${summary}`
         break
